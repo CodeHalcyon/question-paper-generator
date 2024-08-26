@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Selection</title>
+</head>
+<body>
+    <h1>Select Questions for Paper</h1>
+    <form id="questionForm" action="/generate-paper" method="POST">
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Q No</th>
+                    <th>Questions</th>
+                    <th>Marks</th>
+                    <th>Bloom's Level</th>
+                    <th>CO</th>
+                    <th>Unit No</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% questions.forEach(function(question) { %>
+                    <tr>
+                        <td><input type="checkbox" name="selectedQuestions" value="<%= question._id %>"></td>
+                        <td><%= question.Q.No %></td>
+                        <td><%= question.Questions %></td>
+                        <td><%= question.Marks %></td>
+                        <td><%= question.BL %></td>
+                        <td><%= question.CO %></td>
+                        <td><%= question['Unit No'] %></td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <button type="submit">Generate Paper</button>
+    </form>
+</body>
+</html>

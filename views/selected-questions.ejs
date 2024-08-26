@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selected Questions for Paper</title>
+</head>
+<body>
+    <h1>Selected Questions for Paper</h1>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Q No</th>
+            <th>Questions</th>
+            <th>Marks</th>
+            <th>Bloom's Level</th>
+            <th>CO</th>
+            <th>Unit No</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% if (selectedQuestions.length > 0) { %>
+            <% selectedQuestions.forEach(function(question) { %>
+                <tr>
+                    <td><%= question.Q.No %></td>
+                    <td><%= question.Questions %></td>
+                    <td><%= question.Marks %></td>
+                    <td><%= question.BL %></td>
+                    <td><%= question.CO %></td>
+                    <td><%= question['Unit No'] %></td>
+                </tr>
+            <% }) %>
+        <% } else { %>
+            <tr>
+                <td colspan="6">No questions selected.</td>
+            </tr>
+        <% } %>
+    </tbody>
+</table>
+</body>
+</html>
