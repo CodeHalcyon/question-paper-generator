@@ -3,38 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Question Selection</title>
+    <title>Document</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Select Questions for Paper</h1>
-    <form id="questionForm" action="/generate-paper" method="POST">
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Select</th>
-                    <th>Q No</th>
-                    <th>Questions</th>
-                    <th>Marks</th>
-                    <th>Bloom's Level</th>
-                    <th>CO</th>
-                    <th>Unit No</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% questions.forEach(function(question) { %>
-                    <tr>
-                        <td><input type="checkbox" name="selectedQuestions" value="<%= question._id %>"></td>
-                        <td><%= question.Q.No %></td>
-                        <td><%= question.Questions %></td>
-                        <td><%= question.Marks %></td>
-                        <td><%= question.BL %></td>
-                        <td><%= question.CO %></td>
-                        <td><%= question['Unit No'] %></td>
-                    </tr>
-                <% }) %>
-            </tbody>
-        </table>
-        <button type="submit">Generate Paper</button>
+<body class="bg-zinc-800 text-white w-1/2 h-full m-auto">
+    <div>
+        <h1 class="text-2xl font-bold my-10">
+            Enter details
+        </h1>
+    </div>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <div>
+            <label for="subjectName">Enter subject name</label>
+            <input name="subName" class="inline-block rounded-md bg-zinc-700 outline-none p-2" type="text" id="">
+    
+            <label for="year">Select Year</label>
+            <select class="bg-zinc-700" name="year" id="">
+                <option value="I">I</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+            </select>
+    
+            <label for="semester">Select Semester</label>
+            <select class="bg-zinc-700" name="semester" id="">
+                <option value="I">I</option>
+                <option value="II">II</option>
+            </select>
+        </div>
+        <input name="file" class="inline-block mt-5" type="file">
+        <input type="submit" value="Upload file" class="bg-blue-600 p-2 rounded-xl font-bold">
     </form>
+    
 </body>
 </html>

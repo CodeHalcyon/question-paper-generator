@@ -1,0 +1,31 @@
+# Node modules directory
+node_modules/
+
+# Environment variable file
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.tgz
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+*.suo
+*.ntvs_analysis.dat
+*.ncb
+*.swp
+*.swo
+
+# Test coverage
+coverage/

@@ -4,38 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selected Questions for Paper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
     <h1>Selected Questions for Paper</h1>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Q No</th>
-            <th>Questions</th>
-            <th>Marks</th>
-            <th>Bloom's Level</th>
-            <th>CO</th>
-            <th>Unit No</th>
-        </tr>
-    </thead>
-    <tbody>
-        <% if (selectedQuestions.length > 0) { %>
-            <% selectedQuestions.forEach(function(question) { %>
+    <form action="/generate-pdf" method="POST">
+        <table border="1">
+            <thead>
                 <tr>
-                    <td><%= question.Q.No %></td>
-                    <td><%= question.Questions %></td>
-                    <td><%= question.Marks %></td>
-                    <td><%= question.BL %></td>
-                    <td><%= question.CO %></td>
-                    <td><%= question['Unit No'] %></td>
+                    <th>Q No</th>
+                    <th>Questions</th>
+                    <th>Marks</th>
+                    <th>Bloom's Level</th>
+                    <th>CO</th>
+                    <th>Unit No</th>
                 </tr>
-            <% }) %>
-        <% } else { %>
-            <tr>
-                <td colspan="6">No questions selected.</td>
-            </tr>
-        <% } %>
-    </tbody>
-</table>
+            </thead>
+            <tbody>
+                <% if (selectedQuestions.length > 0) { %>
+                    <% selectedQuestions.forEach(function(question, index) { %>
+                        <tr>
+                            <td><%= index + 1 %></td> <!-- Changed to start numbering from 1 -->
+                            <td><%= question.Questions %></td>
+                            <td><%= question.Marks %></td>
+                            <td><%= question.BL %></td>
+                            <td><%= question.CO %></td>
+                            <td><%= question['Unit No'] %></td>
+                            <!-- Hidden input to include question details for the PDF generation -->
+                            <input type="hidden" name="questions[]" value="<%= question.Questions %>">
+                            <input type="hidden" name="marks[]" value="<%= question.Marks %>">
+                            <input type="hidden" name="blooms[]" value="<%= question.BL %>">
+                            <input type="hidden" name="co[]" value="<%= question.CO %>">
+                            <input type="hidden" name="unit[]" value="<%= question['Unit No'] %>">
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="6">No questions selected.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+        <!-- Button to generate the PDF -->
+        <button type="submit">Generate PDF</button>
+    </form>
 </body>
 </html>

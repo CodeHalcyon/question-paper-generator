@@ -1,175 +1,285 @@
-// const express = require('express');
-// const { MongoClient } = require('mongodb');
-// const bodyParser = require('body-parser');
-// const fs = require('fs');
-// const mammoth = require('mammoth');
-// const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const express = require("express");
+const { MongoClient, ObjectId } = require("mongodb");
+const bodyParser = require("body-parser");
+const path = require("path");
+require('dotenv').config();
+const multer = require('multer');
+const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
+const fs = require("fs");
+const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, HeadingLevel} = require("docx");
+const {getQuestionsFromDB} = require("./helpers/getQuestionsFromDB")
+const doctocsv = require("./helpers/convertDocxTablesToCsv")
+const csvtodb = require("./helpers/importToMongo")
+const {getExistingCollections} = require("./helpers/getExistingCollections")
+const root = require("./root")
 
-// const app = express();
-// const port = 3000;
-
-// // MongoDB connection URI
-// const uri = 'mongodb://localhost:27017/';
-
-// // Middleware
-// app.use(bodyParser.urlencoded({ extended: true }));
-// app.set('view engine', 'ejs');
-
-// // Function to get questions from MongoDB
-// async function getQuestionsFromDB() {
-//     const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-//     try {
-//         await client.connect();
-//         const database = client.db('Dean_project_trial');
-//         const collection = database.collection('list of questions');
-
-//         // Fetch all questions
-//         const questions = await collection.find({}).toArray();
-//         return questions;
-//     } finally {
-//         await client.close();
-//     }
-// }
-
-// // Route to display questions with checkboxes
-// app.get('/', async (req, res) => {
-//     try {
-//         const questions = await getQuestionsFromDB();
-//         res.render('index', { questions });
-//     } catch (error) {
-//         console.error('Error fetching questions:', error);
-//         res.status(500).send('Error fetching questions');
-//     }
-// });
-
-// // Route to handle form submission and generate paper
-// app.post('/generate-paper', async (req, res) => {
-//     const selectedQuestionIds = req.body.selectedQuestions;
-    
-//     if (!selectedQuestionIds) {
-//         return res.status(400).send('No questions selected.');
-//     }
-
-//     const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-//     try {
-//         await client.connect();
-//         const database = client.db('Dean_project_trial');
-//         const collection = database.collection('list of questions');
-
-//         const selectedQuestions = await collection.find({
-//             _id: { $in: selectedQuestionIds.map(id => new MongoClient.ObjectId(id)) }
-//         }).toArray();
-
-//         // Here you would generate the paper based on selectedQuestions
-
-//         res.send(selectedQuestions); // Replace this with actual paper generation logic
-//     } finally {
-//         await client.close();
-//     }
-// });
-
-// // Original function to convert .docx tables to CSV
-// async function convertDocxTablesToCsv(inputFilePath) {
-//     try {
-//         // Your existing code to convert .docx to CSV
-//     } catch (error) {
-//         console.error('An error occurred during conversion:', error);
-//     }
-// }
-
-// // Start the server
-// app.listen(port, () => {
-//     console.log(`Server running on http://localhost:${port}`);
-// });
-
-// // Usage example: convert .docx tables to CSV
-// // convertDocxTablesToCsv('input.docx');
-
-
-const express = require('express');
-const { MongoClient, ObjectId } = require('mongodb');  // Import ObjectId
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const mammoth = require('mammoth');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000
 
-// MongoDB connection URI
-const uri = 'mongodb://localhost:27017/';
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      cb(null, 'uploads'); // Specify the directory to store uploaded files
+  },
+  filename: (req, file, cb) => {
+      cb(null, "input.docx"); // Generate a unique filename
+  }
+});
 
-// Middleware
+// Initialize multer with the storage configuration
+const upload = multer({ storage: storage });
+
+
 app.use(bodyParser.urlencoded({ extended: true }));
-app.set('view engine', 'ejs');
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
-// Function to get questions from MongoDB
-async function getQuestionsFromDB() {
-    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const uri = process.env.MONGODB_URI
+app.get("/",(req,res)=>{
+  
+  res.render("index")
+})
 
-    try {
-        await client.connect();
-        const database = client.db('Dean_project_trial');
-        const collection = database.collection('list of questions');
-        const questions = await collection.find({}).toArray();
-        return questions;
-    } finally {
-        await client.close();
+let collectionname = []
+let collectionA="", collectionB=""
+app.post("/upload", upload.single('file'), async (req, res) => {
+  try {
+    console.log(req.body);
+    
+    console.log(req.file); // Contains file info
+    console.log(req.body); // Contains text fields from the form
+
+    // Access the uploaded file path using req.file.path
+    const uploadedFilePath = req.file.path;
+    // Convert DOCX to CSV
+    await doctocsv.convertDocxTablesToCsv(uploadedFilePath);
+    
+    // Define collection names
+    collectionA = `${req.body.subName}_A`.trim();
+    collectionB = `${req.body.subName}_B`.trim();
+
+    // console.log(`Checking if collections already exist: ${collectionA}, ${collectionB}`);
+    
+    // Check if data already exists in the database
+    const existingCollections = await getExistingCollections([collectionA, collectionB]);
+    // console.log(`Existing collections: ${existingCollections}`);
+
+    // Import CSV files only if collections do not exist
+    if (!existingCollections.includes(collectionA)) {
+      // console.log(`Importing CSV to collection: ${collectionA}`);
+      await csvtodb.importCsvToMongo(`${root}/misc/generatedCsvs/output_table_1.csv`, collectionA);
+      // console.log(`CSV import successful for collection: ${collectionA}`);
+    } else {
+      // console.log(`Collection ${collectionA} already exists, skipping import.`);
     }
+
+    if (!existingCollections.includes(collectionB)) {
+      // console.log(`Importing CSV to collection: ${collectionB}`);
+      await csvtodb.importCsvToMongo(`${root}/misc/generatedCsvs/output_table_2.csv`, collectionB);
+      // console.log(`CSV import successful for collection: ${collectionB}`);
+    } else {
+      // console.log(`Collection ${collectionB} already exists, skipping import.`);
+    }
+
+    if (!res.headersSent) {
+      res.redirect("/display");
+    }
+    // Set collection names for display route
+    collectionname = [collectionA, collectionB];
+
+    // console.log('Redirecting to /display...');
+    // Redirect to display page
+    res.redirect("/display");
+  } catch (error) {
+    console.error("Error processing upload:", error);
+    // Check if response was already sent before sending another response
+    if (!res.headersSent) {
+      res.status(500).send("Error processing upload");
+    }
+  }
+});
+
+app.get("/display", async (req, res) => {
+  try {
+    // console.log(collectionname);
+    const questions = await getQuestionsFromDB(collectionA);
+    const questions2 = await getQuestionsFromDB(collectionB);
+    res.render("display", { questions, questions2 });
+  } catch (error) {      
+    res.status(500).send("Error fetching questions");
+  }  
+});
+
+
+app.post("/generate-paper", async (req, res) => {
+  const selectedQuestionIdsA = req.body.selectedQuestionsA;
+  const selectedQuestionIdsB = req.body.selectedQuestionsB;
+  // console.log(selectedQuestionIdsA);
+  // console.log(selectedQuestionIdsB);
+  
+
+  if (!selectedQuestionIdsA) return res.status(400).send("No questions selected from Part A.");
+  if (!selectedQuestionIdsB) return res.status(400).send("No questions selected. from Part B");
+
+  const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+  try {
+      await client.connect();
+      const database = client.db("testing1");
+      const collections = await database.listCollections().toArray();
+      let i=0
+      collections.forEach(collection => {
+        collectionname[i] = collection.name
+        i++
+      });
+      console.log("collection array", collectionname);
+      
+    const collectA = database.collection(collectionA);
+    const collectB = database.collection(collectionB);
+
+    const objectIdsA = Array.isArray(selectedQuestionIdsA) ? selectedQuestionIdsA.map(id => new ObjectId(id)) : [new ObjectId(selectedQuestionIdsA)];
+    const objectIdsB = Array.isArray(selectedQuestionIdsB) ? selectedQuestionIdsB.map(id => new ObjectId(id)) : [new ObjectId(selectedQuestionIdsB)];
+
+    const selectedQuestionsA = await collectA.find({ _id: { $in: objectIdsA } }).toArray();
+    const selectedQuestionsB = await collectB.find({ _id: { $in: objectIdsB } }).toArray();
+
+    // Generate Word Document with the selected questions
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: "PART A",
+                  size: 28, // Font size is in half-points, so 24 points * 2 = 48
+                  bold: true, // Optional: Make the text bold
+                  color:"000000"
+                }),
+              ],
+              heading: HeadingLevel.HEADING_1, // Optional: This can be omitted if you don't want heading style
+            }),
+            createQuestionsTable(selectedQuestionsA), // Function to create a table in the document
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: "PART B",
+                  size: 28, // Font size is in half-points, so 24 points * 2 = 48
+                  bold: true, // Optional: Make the text bold
+                  color:"000000"
+                }),
+              ],
+              heading: HeadingLevel.HEADING_1, // Optional: This can be omitted if you don't want heading style
+            }),
+            createQuestionsTable(selectedQuestionsB)
+          ],
+        },
+      ],
+    });
+    
+
+    const b64string = await Packer.toBase64String(doc);
+    res.setHeader("Content-Disposition", 'attachment; filename="Selected_Questions.docx"');
+    res.send(Buffer.from(b64string, 'base64'));
+  }catch (error) {
+  console.error("Error connecting to MongoDB or performing operations:", error);
+  if (!res.headersSent) {
+    res.status(500).send("Error processing request");
+  }
+} finally {
+  await client.close();
+}
+});
+
+app.get("/success",(req,res)=>{
+  res.send("Done generating")
+})
+
+
+
+
+function createQuestionsTable(questions) {
+  const tableWidth = 100; // Full width of the page (100%)
+
+  const tableRows = [
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: tableWidth * 0.1, type: WidthType.PERCENTAGE }, // 10% of total width
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "Q No", bold: true, size: 28 })], // Font size 20
+            }),
+          ],
+        }),
+        new TableCell({
+          width: { size: tableWidth * 0.5, type: WidthType.PERCENTAGE }, // 50% of total width
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "Questions", bold: true, size: 28 })], // Font size 20
+            }),
+          ],
+        }),
+        new TableCell({
+          width: { size: tableWidth * 0.1, type: WidthType.PERCENTAGE }, // 10% of total width
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "Marks", bold: true, size: 28 })], // Font size 20
+            }),
+          ],
+        }),
+        new TableCell({
+          width: { size: tableWidth * 0.1, type: WidthType.PERCENTAGE }, // 15% of total width
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "Bloom's Level", bold: true, size: 28 })], // Font size 20
+            }),
+          ],
+        }),
+        new TableCell({
+          width: { size: tableWidth * 0.2, type: WidthType.PERCENTAGE }, // 15% of total width
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "CO", bold: true, size: 28 })], // Font size 20
+            }),
+          ],
+        }),
+      ],
+    }),
+  ];
+  
+  questions.forEach((question, index) => {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: `${index + 1}`, size: 28 })] })], // Font size 20
+          }),
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: question.Questions, size: 28 })] })], // Font size 20
+          }),
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: question.Marks, size: 28 })] })], // Font size 20
+          }),
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: question.BL, size: 28 })] })], // Font size 20
+          }),
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: question.CO, size: 28 })] })], // Font size 20
+          }),
+        ],
+      })
+    );
+  });
+  
+
+  return new Table({ rows: tableRows });
 }
 
-// Route to display questions with checkboxes
-app.get('/', async (req, res) => {
-    try {
-        const questions = await getQuestionsFromDB();
-        res.render('index', { questions });
-    } catch (error) {
-        console.error('Error fetching questions:', error);
-        res.status(500).send('Error fetching questions');
-    }
-});
-
-// Route to handle form submission and generate paper
-app.post('/generate-paper', async (req, res) => {
-    const selectedQuestionIds = req.body.selectedQuestions;
-
-    console.log('Raw selectedQuestionIds:', selectedQuestionIds);
-
-    if (!selectedQuestionIds) {
-        return res.status(400).send('No questions selected.');
-    }
-
-    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-    try {
-        await client.connect();
-        const database = client.db('your_database_name');
-        const collection = database.collection('your_collection_name');
-
-        // Convert selectedQuestionIds to an array of ObjectId
-        const objectIds = Array.isArray(selectedQuestionIds) ? 
-                          selectedQuestionIds.map(id => new ObjectId(id)) : 
-                          [new ObjectId(selectedQuestionIds)];
-
-        console.log('Converted ObjectIds:', objectIds);
-
-        const selectedQuestions = await collection.find({ _id: { $in: objectIds } }).toArray();
-
-        console.log('Fetched Questions:', selectedQuestions);
-
-        res.render('selected-questions', { selectedQuestions });
-    } catch (error) {
-        console.error('Error generating paper:', error);
-        res.status(500).send('An error occurred while generating the paper.');
-    } finally {
-        await client.close();
-    }
-});
-
-
-// Start the server
 app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
+
