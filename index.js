@@ -14,6 +14,7 @@ const {getExistingCollections} = require("./helpers/getExistingCollections")
 const root = require("./root")
 
 
+
 const app = express();
 const port = process.env.PORT || 3000
 
@@ -33,10 +34,10 @@ const upload = multer({ storage: storage });
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+app.use(express.static(path.join(__dirname,"/public")))
 
 const uri = process.env.MONGODB_URI
 app.get("/",(req,res)=>{
-  
   res.render("index")
 })
 
@@ -48,6 +49,7 @@ app.post("/upload", upload.single('file'), async (req, res) => {
     
     console.log(req.file); // Contains file info
     console.log(req.body); // Contains text fields from the form
+
 
     // Access the uploaded file path using req.file.path
     const uploadedFilePath = req.file.path;
@@ -92,10 +94,8 @@ app.post("/upload", upload.single('file'), async (req, res) => {
     res.redirect("/display");
   } catch (error) {
     console.error("Error processing upload:", error);
-    // Check if response was already sent before sending another response
-    if (!res.headersSent) {
-      res.status(500).send("Error processing upload");
-    }
+    // res.send("something went wrong try again later :(")
+    res.render("error")
   }
 });
 
@@ -106,7 +106,9 @@ app.get("/display", async (req, res) => {
     const questions2 = await getQuestionsFromDB(collectionB);
     res.render("display", { questions, questions2 });
   } catch (error) {      
-    res.status(500).send("Error fetching questions");
+    // res.status(500).send("Error fetching questions");
+    res.render("error")
+
   }  
 });
 
@@ -161,7 +163,7 @@ app.post("/generate-paper", async (req, res) => {
               ],
               heading: HeadingLevel.HEADING_1, // Optional: This can be omitted if you don't want heading style
             }),
-            createQuestionsTable(selectedQuestionsA), // Function to create a table in the document
+            createQuestionsTable(selectedQuestionsA,"A"), // Function to create a table in the document
             new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
@@ -174,7 +176,7 @@ app.post("/generate-paper", async (req, res) => {
               ],
               heading: HeadingLevel.HEADING_1, // Optional: This can be omitted if you don't want heading style
             }),
-            createQuestionsTable(selectedQuestionsB)
+            createQuestionsTable(selectedQuestionsB, "B")
           ],
         },
       ],
@@ -187,7 +189,9 @@ app.post("/generate-paper", async (req, res) => {
   }catch (error) {
   console.error("Error connecting to MongoDB or performing operations:", error);
   if (!res.headersSent) {
-    res.status(500).send("Error processing request");
+    // res.status(500).send("Error processing request");
+    res.render("error")
+
   }
 } finally {
   await client.close();
@@ -201,7 +205,7 @@ app.get("/success",(req,res)=>{
 
 
 
-function createQuestionsTable(questions) {
+function createQuestionsTable(questions, choice) {
   const tableWidth = 100; // Full width of the page (100%)
 
   const tableRows = [
@@ -250,13 +254,30 @@ function createQuestionsTable(questions) {
       ],
     }),
   ];
-  
+  let saq=[]
+  if(choice === "A")
+  saq = ["1a","1b","1c","1d","1e"]
+  else
+  saq = ["2a","2b","3a","3b","4a","4b","5a","5b","6","7"]
+
+
   questions.forEach((question, index) => {
+    if(saq[index] === "3a" ||saq[index] === "5a" ||saq[index] === "7"){
+      tableRows.push(new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: "OR", size: 28})], alignment: "center" })], // Font size 20,
+            columnSpan: 5
+          })
+        ],
+      }))
+    }
     tableRows.push(
+      
       new TableRow({
         children: [
           new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: `${index + 1}`, size: 28 })] })], // Font size 20
+            children: [new Paragraph({ children: [new TextRun({ text: `${saq[index]}`, size: 28 })] })], // Font size 20
           }),
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: question.Questions, size: 28 })] })], // Font size 20

@@ -12,13 +12,13 @@
             Enter details
         </h1>
     </div>
-    <form action="/upload" method="post" enctype="multipart/form-data">
+    <form  action="/upload" method="post" enctype="multipart/form-data">
         <div>
             <label for="subjectName">Enter subject name</label>
-            <input name="subName" class="inline-block rounded-md bg-zinc-700 outline-none p-2" type="text" id="">
+            <input name="subName" class="inline-block rounded-md bg-zinc-700 outline-none p-2" type="text" id="subName">
     
             <label for="year">Select Year</label>
-            <select class="bg-zinc-700" name="year" id="">
+            <select class="bg-zinc-700" name="year" id="year">
                 <option value="I">I</option>
                 <option value="II">II</option>
                 <option value="III">III</option>
@@ -26,14 +26,14 @@
             </select>
     
             <label for="semester">Select Semester</label>
-            <select class="bg-zinc-700" name="semester" id="">
+            <select class="bg-zinc-700" name="semester" id="sem">
                 <option value="I">I</option>
                 <option value="II">II</option>
             </select>
         </div>
-        <input name="file" class="inline-block mt-5" type="file">
-        <input type="submit" value="Upload file" class="bg-blue-600 p-2 rounded-xl font-bold">
-    </form>
-    
+        <input name="file" class="inline-block mt-5" type="file" id="file">
+        <input id="btn" type="submit" value="Upload file" class="bg-blue-600 p-2 rounded-xl font-bold">
+    </form>  
+    <script src="./uploadValidation.js"></script>
 </body>
 </html>
