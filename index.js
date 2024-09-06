@@ -112,7 +112,6 @@ app.get("/display", async (req, res) => {
   }  
 });
 
-
 app.post("/generate-paper", async (req, res) => {
   const selectedQuestionIdsA = req.body.selectedQuestionsA;
   const selectedQuestionIdsB = req.body.selectedQuestionsB;
@@ -202,9 +201,6 @@ app.get("/success",(req,res)=>{
   res.send("Done generating")
 })
 
-
-
-
 function createQuestionsTable(questions, choice) {
   const tableWidth = 100; // Full width of the page (100%)
 
@@ -258,11 +254,11 @@ function createQuestionsTable(questions, choice) {
   if(choice === "A")
   saq = ["1a","1b","1c","1d","1e"]
   else
-  saq = ["2a","2b","3a","3b","4a","4b","5a","5b","6","7"]
+  saq = ["2a","2b","3","4a","4b","5","6","7"]
 
 
   questions.forEach((question, index) => {
-    if(saq[index] === "3a" ||saq[index] === "5a" ||saq[index] === "7"){
+    if(saq[index] === "3" ||saq[index] === "5" ||saq[index] === "7"){
       tableRows.push(new TableRow({
         children: [
           new TableCell({
